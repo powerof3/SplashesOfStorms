@@ -31,7 +31,7 @@ namespace RayCast
 	struct Output
 	{
 		RE::NiPoint3 hitPos{};
-		RE::NiPoint3 normal{};
+		RE::NiMatrix3 normal{};
 		bool hitActor{ false };
 		bool hitWater{ false };
 	};
@@ -75,14 +75,14 @@ namespace RayCast
 			const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
-			output.normal = { -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) };
+			output.normal.SetEulerAnglesXYZ({ -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
 
 			if (a_input.waterHeight >= output.hitPos.z) {
 				output.hitWater = true;
 				output.hitPos.z = a_input.waterHeight;
 			}
 
-			auto collidingLayer = static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F);
+			auto collidingLayer = static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F); //RE::CFilter::Flag::kLayerMask
 			if (stl::is_in(collidingLayer, RE::COL_LAYER::kCharController, RE::COL_LAYER::kBiped, RE::COL_LAYER::kDeadBip)) {
 				output.hitActor = true;
 			}

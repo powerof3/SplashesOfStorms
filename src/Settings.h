@@ -22,7 +22,7 @@ protected:
 	template <class T>
 	void get_value(T& a_value, const toml::node_view<const toml::node>& a_node, std::string_view a_key)
 	{
-		a_value = *a_node[type][a_key].value_or(a_value);
+		a_value = a_node[type][a_key].value_or(a_value);
 	}
 };
 

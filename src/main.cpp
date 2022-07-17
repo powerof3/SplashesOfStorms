@@ -4,21 +4,12 @@
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
-	switch (a_message->type) {
-	case SKSE::MessagingInterface::kPostLoad:
-		{
-			if (Settings::GetSingleton()->LoadSettings()) {
-				Hooks::Install();
-				Debug::Install();
-			}
+	if (a_message->type == SKSE::MessagingInterface::kPostLoad) {
+		if (!Settings::GetSingleton()->LoadSettings()) {
+			logger::error("Failed to load settings from .toml config! Default values will be used instead");
 		}
-		break;
-	case SKSE::MessagingInterface::kDataLoaded:
-		{
-		}
-		break;
-	default:
-		break;
+	    Hooks::Install();
+		Debug::Install();
 	}
 }
 
@@ -26,7 +17,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion(Version::MAJOR);
-	v.PluginName("Rain Splashes");
+	v.PluginName("Splashes of Storms");
 	v.AuthorName("powerofthree");
 	v.UsesAddressLibrary(true);
 	v.CompatibleVersions({ SKSE::RUNTIME_LATEST });
@@ -37,7 +28,7 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
-	a_info->name = "Rain Splashes";
+	a_info->name = "Splashes of Storms";
 	a_info->version = Version::MAJOR;
 
 	if (a_skse->IsEditor()) {

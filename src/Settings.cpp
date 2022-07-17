@@ -51,6 +51,12 @@ bool Settings::LoadSettings()
 			<< '\t' << e.description() << '\n'
 			<< "\t\t(" << e.source().begin << ')';
 		logger::error(FMT_STRING("{}"sv), ss.str());
+
+		return false;
+	} catch (const std::exception& e) {
+		logger::error("{}",e.what());
+
+		return false;
 	}
 
 	return true;
@@ -64,7 +70,8 @@ Rain* Settings::GetRainType()
 	if (cache.weather == nullptr || cache.weather != currentWeather) {
 		if (cache.weather = currentWeather; cache.weather) {
 			if (const auto precip = cache.weather->precipitationData; precip && precip->data.size() >= 12) {
-				switch (static_cast<std::uint32_t>(precip->data[11].f)) {
+				switch (static_cast<std::uint32_t>(precip->data[11].f)) {  //particle density
+				case 1:
 				case 2:
 				case 3:
 				case 4:
