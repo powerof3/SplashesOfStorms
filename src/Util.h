@@ -21,11 +21,34 @@ namespace Camera
 
 namespace RayCast
 {
+	namespace
+	{
+		std::pair<bool, float> get_within_water_bounds(const RE::NiPoint3& a_pos)
+		{
+			for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
+				if (waterObject) {
+					for (const auto& bound : waterObject->multiBounds) {
+						if (bound) {
+							if (auto size{ bound->size }; size.z <= 10.0f) {  //avoid sloped water
+								auto center{ bound->center };
+								const auto boundMin = center - size;
+								const auto boundMax = center + size;
+								if (!(a_pos.x < boundMin.x || a_pos.x > boundMax.x || a_pos.y < boundMin.y || a_pos.y > boundMax.y)) {
+									return { true, center.z };
+								}
+							}
+						}
+					}
+				}
+			}
+			return { false, 0.0f };
+		}
+	}
+
 	struct Input
 	{
 		RE::NiPoint3 rayOrigin{};
 		float height{ 0.0f };
-		float waterHeight{ 0.0f };
 	};
 
 	struct Output
@@ -77,12 +100,12 @@ namespace RayCast
 
 			output.normal.SetEulerAnglesXYZ({ -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
 
-			if (a_input.waterHeight >= output.hitPos.z) {
+			if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
 				output.hitWater = true;
-				output.hitPos.z = a_input.waterHeight;
+				output.hitPos.z = waterHeight;
 			}
 
-			auto collidingLayer = static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F); //RE::CFilter::Flag::kLayerMask
+			auto collidingLayer = static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F);  //RE::CFilter::Flag::kLayerMask
 			if (stl::is_in(collidingLayer, RE::COL_LAYER::kCharController, RE::COL_LAYER::kBiped, RE::COL_LAYER::kDeadBip)) {
 				output.hitActor = true;
 			}

@@ -43,8 +43,7 @@ namespace Ripples
 						SKSE::GetTaskInterface()->AddTask([=] {
 							const RayCast::Input rayCastInput{
 								*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
-								settings->rayCastHeight,
-								RE::TES::GetSingleton()->GetWaterHeight(playerPos, cell)
+								settings->rayCastHeight
 							};
 
 							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
@@ -105,12 +104,11 @@ namespace Splashes
 
 					const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
 
-					if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, true); rayOrigin) {
+					if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, false); rayOrigin) {
 						SKSE::GetTaskInterface()->AddTask([=] {
 							const RayCast::Input rayCastInput{
 								*rayOrigin,
-								settings->rayCastHeight,
-								RE::TES::GetSingleton()->GetWaterHeight(playerPos, cell)
+								settings->rayCastHeight
 							};
 
 							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
