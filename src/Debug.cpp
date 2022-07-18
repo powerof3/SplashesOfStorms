@@ -27,7 +27,7 @@ namespace Debug
 				std::string weather;
 				switch (a_scriptData->GetIntegerChunk()->GetInteger()) {
 				case 0:
-					weather = "TestCloudyRain ";
+					weather = "TestCloudyRain";
 					break;
 				case 1:
 					weather = "SkyrimOvercastRain";
