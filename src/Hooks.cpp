@@ -43,7 +43,8 @@ namespace Ripples
 						SKSE::GetTaskInterface()->AddTask([=] {
 							const RayCast::Input rayCastInput{
 								*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
-								settings->rayCastHeight
+								settings->rayCastHeight,
+								settings->colLayerRipple
 							};
 
 							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
@@ -108,7 +109,8 @@ namespace Splashes
 						SKSE::GetTaskInterface()->AddTask([=] {
 							const RayCast::Input rayCastInput{
 								*rayOrigin,
-								settings->rayCastHeight
+								settings->rayCastHeight,
+								settings->colLayerSplash
 							};
 
 							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {

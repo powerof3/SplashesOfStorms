@@ -87,6 +87,8 @@ public:
 	Rain* GetRainType();
 
 	float rayCastHeight{ 6000.0f };
+	std::uint32_t colLayerSplash{ stl::to_underlying(RE::COL_LAYER::kLOS) };
+	std::uint32_t colLayerRipple{ stl::to_underlying(RE::COL_LAYER::kLOS) };
 
 private:
 	Rain light;

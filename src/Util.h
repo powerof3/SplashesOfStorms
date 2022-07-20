@@ -49,6 +49,7 @@ namespace RayCast
 	{
 		RE::NiPoint3 rayOrigin{};
 		float height{ 0.0f };
+		std::uint32_t collisionLayer{ 0 };
 	};
 
 	struct Output
@@ -90,7 +91,7 @@ namespace RayCast
 		pickData.rayInput.from = rayStart * havokWorldScale;
 		pickData.rayInput.to = rayEnd * havokWorldScale;
 		pickData.rayInput.enableShapeCollectionFilter = false;
-		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | stl::to_underlying(RE::COL_LAYER::kLOS);
+		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | a_input.collisionLayer;
 
 		if (a_havokWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;

@@ -38,7 +38,10 @@ bool Settings::LoadSettings()
 	try {
 		toml::table tbl = toml::parse_file(fmt::format("Data/SKSE/Plugins/{}.toml", Version::PROJECT));
 
-		rayCastHeight = tbl["Settings"]["RaycastHeight"].value_or(rayCastHeight);
+		const auto& settings = tbl["Settings"];
+		rayCastHeight = settings["RaycastHeight"].value_or(rayCastHeight);
+		colLayerSplash = settings["CollisionLayerSplashes"].value_or(colLayerSplash);
+		colLayerRipple = settings["CollisionLayerRipples"].value_or(colLayerRipple);
 
 		light.LoadSettings(tbl, Rain::TYPE::kLight, "LightRain");
 		medium.LoadSettings(tbl, Rain::TYPE::kMedium, "MediumRain");

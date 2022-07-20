@@ -5,15 +5,15 @@ namespace Debug
 {
 	namespace detail
 	{
-		constexpr auto LONG_NAME = "ReloadRain"sv;
-		constexpr auto SHORT_NAME = "rain"sv;
+		constexpr auto LONG_NAME = "ReloadSplashes"sv;
+		constexpr auto SHORT_NAME = "splashes"sv;
 
 		[[nodiscard]] const std::string& HelpString()
 		{
 			static auto help = []() {
 				std::string buf;
-				buf += "\"Reload Rain Splashes settings\" <id>";
-				buf += "\n\t<id> ::= <integer>";
+				buf += "Reload Splashes of Storms settings from config\n";
+				buf += R"(<id> : 0 - light rain | 1 -  medium rain | 2 - heavy rain | 3 - clear weather)";
 				return buf;
 			}();
 			return help;
@@ -47,7 +47,7 @@ namespace Debug
 			}
 
 			if (const auto console = RE::ConsoleLog::GetSingleton(); console && console->IsConsoleMode()) {
-				console->Print("Rain Splashes settings reloaded");
+				console->Print("Splashes of Storms settings reloaded");
 			}
 
 			return true;
