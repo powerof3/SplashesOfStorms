@@ -5,8 +5,8 @@ namespace Debug
 {
 	namespace detail
 	{
-		constexpr auto LONG_NAME = "ReloadSplashes"sv;
-		constexpr auto SHORT_NAME = "splashes"sv;
+		constexpr auto LONG_NAME = "SplashesOfStormsReload"sv;
+		constexpr auto SHORT_NAME = "splashesofstorms"sv;
 
 		[[nodiscard]] const std::string& HelpString()
 		{
