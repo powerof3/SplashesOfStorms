@@ -1,103 +1,108 @@
 #pragma once
 
-class RainObject
+namespace Settings
 {
-public:
-	RainObject() = delete;
-	virtual ~RainObject() = default;
 
-	explicit RainObject(std::string a_type) :
-		type(std::move(a_type))
-	{}
-
-	virtual void LoadSettings(const toml::node_view<const toml::node>& a_node);
-
-	bool enabled{ true };
-	float rayCastRadius{ 1000.0f };
-	float delay{ 0.0f };
-
-protected:
-	std::string type;
-
-	template <class T>
-	void get_value(T& a_value, const toml::node_view<const toml::node>& a_node, std::string_view a_key)
+	class RainObject
 	{
-		a_value = a_node[type][a_key].value_or(a_value);
-	}
-};
+	public:
+		RainObject() = delete;
+		virtual ~RainObject() = default;
 
-class Splash : public RainObject
-{
-public:
-	Splash() :
-		RainObject("splashes")
-	{}
-	~Splash() override = default;
+		explicit RainObject(std::string a_type) :
+			type(std::move(a_type))
+		{}
 
-	void LoadSettings(const toml::node_view<const toml::node>& a_node) override;
+		virtual void LoadSettings(const toml::node_view<const toml::node>& a_node);
 
-	std::string nif{ "Effects\\rainSplashNoSpray.NIF" };
-	std::string nifActor{ "Effects\\rainSplashNoSpray.NIF" };
-	float nifScale{ 0.6f };
-	float nifScaleActor{ 0.2f };
-};
+		bool enabled{ true };
+		float rayCastRadius{ 1000.0f };
+		float delay{ 0.0f };
 
-class Ripple : public RainObject
-{
-public:
-	Ripple() :
-		RainObject("ripples")
-	{}
-	~Ripple() override = default;
+	protected:
+		std::string type;
 
-	void LoadSettings(const toml::node_view<const toml::node>& a_node) override;
-
-	std::uint32_t rayCastIterations{ 15 };
-	float rippleDisplacementAmount{ 0.4f };
-};
-
-class Rain
-{
-public:
-	enum class TYPE
-	{
-		kNone,
-		kLight,
-		kMedium,
-		kHeavy
+		template <class T>
+		void get_value(T& a_value, const toml::node_view<const toml::node>& a_node, std::string_view a_key)
+		{
+			a_value = a_node[type][a_key].value_or(a_value);
+		}
 	};
 
-	void LoadSettings(const toml::table& a_tbl, TYPE a_type, std::string_view a_section);
-
-	TYPE type{ TYPE::kNone };
-	Splash splash;
-	Ripple ripple;
-};
-
-class Settings
-{
-public:
-	[[nodiscard]] static Settings* GetSingleton()
+	class Splash : public RainObject
 	{
-		static Settings singleton;
-		return std::addressof(singleton);
-	}
+	public:
+		Splash() :
+			RainObject("splashes")
+		{}
+		~Splash() override = default;
 
-	bool LoadSettings();
-	Rain* GetRainType();
+		void LoadSettings(const toml::node_view<const toml::node>& a_node) override;
 
-	float rayCastHeight{ 6000.0f };
-	std::uint32_t colLayerSplash{ stl::to_underlying(RE::COL_LAYER::kLOS) };
-	std::uint32_t colLayerRipple{ stl::to_underlying(RE::COL_LAYER::kLOS) };
+		std::string nif{ "Effects\\rainSplashNoSpray.NIF" };
+		std::string nifActor{ "Effects\\rainSplashNoSpray.NIF" };
+		float nifScale{ 0.6f };
+		float nifScaleActor{ 0.2f };
+	};
 
-private:
-	Rain light;
-	Rain medium;
-	Rain heavy;
-
-	struct
+	class Ripple : public RainObject
 	{
-		RE::TESWeather* weather{ nullptr };
-		Rain::TYPE rainType{ Rain::TYPE::kNone };
-	} cache;
-};
+	public:
+		Ripple() :
+			RainObject("ripples")
+		{}
+		~Ripple() override = default;
+
+		void LoadSettings(const toml::node_view<const toml::node>& a_node) override;
+
+		std::uint32_t rayCastIterations{ 15 };
+		float rippleDisplacementAmount{ 0.4f };
+	};
+
+	class Rain
+	{
+	public:
+		enum class TYPE
+		{
+			kNone,
+			kLight,
+			kMedium,
+			kHeavy
+		};
+
+		void LoadSettings(const toml::table& a_tbl, TYPE a_type, std::string_view a_section);
+
+		TYPE type{ TYPE::kNone };
+		Splash splash;
+		Ripple ripple;
+	};
+
+	class Manager
+	{
+	public:
+		[[nodiscard]] static Manager* GetSingleton()
+		{
+			static Manager singleton;
+			return std::addressof(singleton);
+		}
+
+		bool LoadSettings();
+		Rain* GetRainType();
+
+		float rayCastHeight{ 6000.0f };
+		std::uint32_t colLayerSplash{ stl::to_underlying(RE::COL_LAYER::kLOS) };
+		std::uint32_t colLayerRipple{ stl::to_underlying(RE::COL_LAYER::kLOS) };
+		bool disableRipplesAtFastSpeed{ true };
+
+	private:
+		Rain light;
+		Rain medium;
+		Rain heavy;
+
+		struct
+		{
+			RE::TESWeather* weather{ nullptr };
+			Rain::TYPE rainType{ Rain::TYPE::kNone };
+		} cache;
+	};
+}

@@ -81,8 +81,9 @@ namespace RayCast
 	inline std::optional<Output> GenerateRayCast(RE::bhkWorld* a_havokWorld, const Input& a_input)
 	{
 		RE::NiPoint3 rayStart = a_input.rayOrigin;
+		RE::NiPoint3 rayEnd = a_input.rayOrigin;
+
 		rayStart.z = a_input.height;
-		RE::NiPoint3 rayEnd = rayStart;
 		rayEnd.z = -a_input.height;
 
 		RE::bhkPickData pickData;
@@ -106,9 +107,15 @@ namespace RayCast
 				output.hitPos.z = waterHeight;
 			}
 
-			auto collidingLayer = static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F);  //RE::CFilter::Flag::kLayerMask
-			if (stl::is_in(collidingLayer, RE::COL_LAYER::kCharController, RE::COL_LAYER::kBiped, RE::COL_LAYER::kDeadBip)) {
+			switch (static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F)) {
+			case RE::COL_LAYER::kCharController:
+			case RE::COL_LAYER::kBiped:
+			case RE::COL_LAYER::kDeadBip:
+			case RE::COL_LAYER::kBipedNoCC:
 				output.hitActor = true;
+				break;
+			default:
+				break;
 			}
 
 			return output;
@@ -116,4 +123,102 @@ namespace RayCast
 
 		return std::nullopt;
 	}
+}
+
+namespace Ripples
+{
+	struct Static
+	{
+		static inline bool showProceduralWater = false;
+
+		static void ToggleWaterRipples(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
+		{
+			float fadeAmount = a_fadeAmount;
+			if (a_enabled && a_fadeAmount > 0.0f) {
+				showProceduralWater = true;
+			} else {
+				if (!showProceduralWater) {
+					return;
+				}
+				showProceduralWater = false;
+				fadeAmount = 0.0f;
+			}
+			for (auto& waterObject : a_waterSystem->waterObjects) {
+				if (waterObject) {
+					if (const auto& rippleObject = waterObject->waterRippleObject; rippleObject) {
+						if (a_enabled) {
+							rippleObject->SetAppCulled(false);
+						} else {
+							rippleObject->SetAppCulled(true);
+						}
+
+						RE::BSVisit::TraverseScenegraphGeometries(rippleObject.get(), [&](RE::BSGeometry* a_geometry) -> RE::BSVisit::BSVisitControl {
+							using State = RE::BSGeometry::States;
+							using Feature = RE::BSShaderMaterial::Feature;
+
+							if (const auto effect = a_geometry->properties[State::kEffect].get()) {
+								if (const auto effectShaderProp = netimmerse_cast<RE::BSEffectShaderProperty*>(effect)) {
+									if (const auto material = static_cast<RE::BSEffectShaderMaterial*>(effectShaderProp->material)) {
+										material->baseColor.alpha = fadeAmount;
+									}
+								}
+							}
+
+							return RE::BSVisit::BSVisitControl::kContinue;
+						});
+					}
+				}
+			}
+		}
+	};
+
+	struct Dynamic
+	{
+		static inline float rippleTimer = 0.0f;
+
+		static void ToggleWaterRipples(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
+		{
+			if (a_enabled && a_fadeAmount > 0.0f) {
+				const auto settings = Settings::Manager::GetSingleton();
+				const auto rain = settings->GetRainType();
+
+				rippleTimer += Timer::GetSecondsSinceLastFrame();
+
+				if (rippleTimer > rain->ripple.delay) {
+					rippleTimer = 0.0f;
+
+					const auto player = RE::PlayerCharacter::GetSingleton();
+
+					const auto cell = player->GetParentCell();
+					if (!cell) {
+						return;
+					}
+
+					const auto bhkWorld = cell->GetbhkWorld();
+					if (!bhkWorld) {
+						return;
+					}
+
+					if (!settings->disableRipplesAtFastSpeed || player->DoGetMovementSpeed() <= 120.0f) {  //walking speed
+						const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
+						const auto radius = rain->ripple.rayCastRadius;
+
+						SKSE::GetTaskInterface()->AddTask([=] {
+							for (std::uint32_t i = 0; i < rain->ripple.rayCastIterations; i++) {
+								const RayCast::Input rayCastInput{
+									*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
+									settings->rayCastHeight,
+									settings->colLayerRipple
+								};
+
+								if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
+									a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
+								}
+							}
+						});
+					}
+				}
+			}
+		}
+	};
 }

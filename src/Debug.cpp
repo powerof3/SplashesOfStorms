@@ -5,15 +5,15 @@ namespace Debug
 {
 	namespace detail
 	{
-		constexpr auto LONG_NAME = "SplashesOfStormsReload"sv;
-		constexpr auto SHORT_NAME = "splashesofstorms"sv;
+		constexpr auto LONG_NAME = "SplashesReload"sv;
+		constexpr auto SHORT_NAME = "splashes"sv;
 
 		[[nodiscard]] const std::string& HelpString()
 		{
 			static auto help = []() {
 				std::string buf;
 				buf += "Reload Splashes of Storms settings from config\n";
-				buf += R"(<id> : 0 - light rain | 1 -  medium rain | 2 - heavy rain | 3 - clear weather)";
+				buf += R"(<id> : 0 - clear weather | 1 - light rain | 2 -  medium rain | 3 - heavy rain )";
 				return buf;
 			}();
 			return help;
@@ -21,22 +21,22 @@ namespace Debug
 
 		bool Execute(const RE::SCRIPT_PARAMETER*, RE::SCRIPT_FUNCTION::ScriptData* a_scriptData, RE::TESObjectREFR*, RE::TESObjectREFR*, RE::Script*, RE::ScriptLocals*, double&, std::uint32_t&)
 		{
-			Settings::GetSingleton()->LoadSettings();
+			Settings::Manager::GetSingleton()->LoadSettings();
 
 			if (const auto sky = RE::Sky::GetSingleton(); sky && !sky->overrideWeather) {
 				std::string weather;
 				switch (a_scriptData->GetIntegerChunk()->GetInteger()) {
 				case 0:
-					weather = "TestCloudyRain";
+					weather = "SkyrimClear";
 					break;
 				case 1:
-					weather = "SkyrimOvercastRain";
+					weather = "TestCloudyRain";
 					break;
 				case 2:
-					weather = "SkyrimStormRain";
+					weather = "SkyrimOvercastRain";
 					break;
 				case 3:
-					weather = "SkyrimClear";
+					weather = "SkyrimStormRain";
 					break;
 				default:
 					break;

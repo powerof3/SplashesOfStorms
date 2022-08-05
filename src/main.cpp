@@ -5,7 +5,7 @@
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
 	if (a_message->type == SKSE::MessagingInterface::kPostLoad) {
-		if (!Settings::GetSingleton()->LoadSettings()) {
+		if (!Settings::Manager::GetSingleton()->LoadSettings()) {
 			logger::error("Failed to load settings from .toml config! Default values will be used instead");
 		}
 	    Hooks::Install();

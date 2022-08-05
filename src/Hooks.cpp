@@ -4,60 +4,38 @@
 
 namespace Ripples
 {
-	static inline float rippleTimer = 0.0f;
-
-	struct ToggleWaterSplashes
+    struct ToggleWaterSplashes
 	{
-		static void thunk(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_arg3)
+		static void thunk(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
 		{
-			const auto settings = Settings::GetSingleton();
+			const auto settings = Settings::Manager::GetSingleton();
 			const auto rain = settings->GetRainType();
 
 			if (!rain || !rain->ripple.enabled) {
-				return func(a_waterSystem, a_enabled, a_arg3);
+				return func(a_waterSystem, a_enabled, a_fadeAmount);
 			}
 
-			if (a_enabled && a_arg3 > 0.0f) {
-				rippleTimer += Timer::GetSecondsSinceLastFrame();
+			return Dynamic::ToggleWaterRipples(a_waterSystem, a_enabled, a_fadeAmount);
+		}
+		static inline REL::Relocation<decltype(thunk)> func;
+	};
 
-				if (rippleTimer > rain->ripple.delay) {
-					rippleTimer = 0.0f;
+	struct TraverseSceneGraphObjects_AddWaterRecurse
+	{
+		struct DoAddWater
+		{
+			RE::TESWaterForm* waterForm;                                         // 00
+			float waterHeight;                                                   // 08
+			std::uint32_t pad0C;                                                 // 0C
+			RE::BSTArray<RE::NiPointer<RE::BSMultiBoundAABB>>* multiboundArray;  // 10
+			bool noDisplacement;                                                 // 18
+			bool isProceduralWater;                                              // 19
+		};
+		static_assert(sizeof(DoAddWater) == 0x20);
 
-					const auto cell = RE::PlayerCharacter::GetSingleton()->GetParentCell();
-					if (!cell) {
-						return;
-					}
-
-					const auto bhkWorld = cell->GetbhkWorld();
-					if (!bhkWorld) {
-						return;
-					}
-
-					const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
-					const auto radius = rain->ripple.rayCastRadius;
-
-					const auto halfIter = rain->ripple.rayCastIterations / 2;
-					const auto halfRadius = radius * 0.5f;
-
-					for (std::uint32_t i = 0; i < halfIter; i++) {
-						SKSE::GetTaskInterface()->AddTask([=] {
-							const RayCast::Input rayCastInput{
-								*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
-								settings->rayCastHeight,
-								settings->colLayerRipple
-							};
-
-							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
-								//generate points around raycast hit position to spawn more ripples
-								for (std::uint32_t k = 0; k < halfIter; k++) {
-									auto newHitPos = RayCast::GenerateRandomPointAroundPlayer(halfRadius, rayCastOutput->hitPos, false);
-									a_waterSystem->AddRipple(*newHitPos, rain->ripple.rippleDisplacementAmount * 0.01f);
-								}
-							}
-						});
-					}
-				}
-			}
+		static RE::BSVisit::BSVisitControl thunk(RE::NiAVObject* a_object, DoAddWater& a_visitor)
+		{
+			return func(a_object, a_visitor);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
@@ -66,6 +44,9 @@ namespace Ripples
 	{
 		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(25638, 26179), OFFSET(0x238, 0x223) };  //Precipitation::Update
 		stl::write_thunk_call<ToggleWaterSplashes>(target.address());
+
+		//REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(31387, 32178), 0x36 };  //TESWaterSystem::AddWaterRecurse
+		//stl::write_thunk_call<TraverseSceneGraphObjects_AddWaterRecurse>(target.address());
 
 		logger::info("installed ripples");
 	}
@@ -81,9 +62,10 @@ namespace Splashes
 		{
 			func(a_precip);
 
-			if (RE::Sky::GetSingleton()->IsRaining()) {
-				const auto settings = Settings::GetSingleton();
+			if (const auto sky = RE::Sky::GetSingleton(); sky->mode.all(RE::Sky::Mode::kFull) && sky->IsRaining()) {
+				const auto settings = Settings::Manager::GetSingleton();
 				const auto rain = settings->GetRainType();
+
 				if (!rain || !rain->splash.enabled) {
 					return;
 				}
@@ -93,7 +75,8 @@ namespace Splashes
 				if (splashTimer > rain->splash.delay) {
 					splashTimer = 0.0f;
 
-					const auto cell = RE::PlayerCharacter::GetSingleton()->GetParentCell();
+					const auto player = RE::PlayerCharacter::GetSingleton();
+					const auto cell = player->GetParentCell();
 					if (!cell) {
 						return;
 					}
@@ -103,7 +86,8 @@ namespace Splashes
 						return;
 					}
 
-					const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
+					auto playerPos = player->GetPosition();
+					playerPos.z += player->GetHeight();
 
 					if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, false); rayOrigin) {
 						SKSE::GetTaskInterface()->AddTask([=] {
