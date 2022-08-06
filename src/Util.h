@@ -1,14 +1,5 @@
 #pragma once
 
-namespace Timer
-{
-	inline float GetSecondsSinceLastFrame()
-	{
-		REL::Relocation<float*> timer{ RELOCATION_ID(523660, 410199) };
-		return *timer;
-	}
-}
-
 namespace Camera
 {
 	inline bool PointInFrustum(const RE::NiPoint3& a_point, RE::NiCamera* a_camera, float a_radius)
@@ -78,9 +69,18 @@ namespace RayCast
 		return std::nullopt;
 	}
 
-	inline std::optional<Output> GenerateRayCast(RE::bhkWorld* a_havokWorld, const Input& a_input)
+	inline std::optional<Output> GenerateRayCast(RE::TESObjectCELL* a_cell, const Input& a_input)
 	{
-		RE::NiPoint3 rayStart = a_input.rayOrigin;
+		if (!a_cell || a_cell != RE::PlayerCharacter::GetSingleton()->GetParentCell()) {
+			return std::nullopt;
+		}
+
+	    const auto bhkWorld = a_cell->GetbhkWorld();
+		if (!bhkWorld) {
+			return std::nullopt;
+		}
+
+	    RE::NiPoint3 rayStart = a_input.rayOrigin;
 		RE::NiPoint3 rayEnd = a_input.rayOrigin;
 
 		rayStart.z = a_input.height;
@@ -94,7 +94,7 @@ namespace RayCast
 		pickData.rayInput.enableShapeCollectionFilter = false;
 		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | a_input.collisionLayer;
 
-		if (a_havokWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
+		if (bhkWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;
 
 			const auto distance = rayEnd - rayStart;
@@ -182,20 +182,14 @@ namespace Ripples
 				const auto settings = Settings::Manager::GetSingleton();
 				const auto rain = settings->GetRainType();
 
-				rippleTimer += Timer::GetSecondsSinceLastFrame();
+				rippleTimer += RE::GetSecondsSinceLastFrame();
 
 				if (rippleTimer > rain->ripple.delay) {
 					rippleTimer = 0.0f;
 
 					const auto player = RE::PlayerCharacter::GetSingleton();
-
 					const auto cell = player->GetParentCell();
 					if (!cell) {
-						return;
-					}
-
-					const auto bhkWorld = cell->GetbhkWorld();
-					if (!bhkWorld) {
 						return;
 					}
 
@@ -211,7 +205,7 @@ namespace Ripples
 									settings->colLayerRipple
 								};
 
-								if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
+								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
 									a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
 								}
 							}

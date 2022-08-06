@@ -70,7 +70,7 @@ namespace Splashes
 					return;
 				}
 
-				splashTimer += Timer::GetSecondsSinceLastFrame();
+				splashTimer += RE::GetSecondsSinceLastFrame();
 
 				if (splashTimer > rain->splash.delay) {
 					splashTimer = 0.0f;
@@ -78,11 +78,6 @@ namespace Splashes
 					const auto player = RE::PlayerCharacter::GetSingleton();
 					const auto cell = player->GetParentCell();
 					if (!cell) {
-						return;
-					}
-
-					const auto bhkWorld = cell->GetbhkWorld();
-					if (!bhkWorld) {
 						return;
 					}
 
@@ -97,7 +92,7 @@ namespace Splashes
 								settings->colLayerSplash
 							};
 
-							if (const auto rayCastOutput = GenerateRayCast(bhkWorld, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
+							if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
 								const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
 								const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
 
