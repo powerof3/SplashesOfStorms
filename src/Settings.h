@@ -17,6 +17,7 @@ namespace Settings
 
 		bool enabled{ true };
 		float rayCastRadius{ 1000.0f };
+		std::uint32_t rayCastIterations{ 1 };
 		float delay{ 0.0f };
 
 	protected:
@@ -50,12 +51,13 @@ namespace Settings
 	public:
 		Ripple() :
 			RainObject("ripples")
-		{}
+		{
+			rayCastIterations = 15;
+		}
 		~Ripple() override = default;
 
 		void LoadSettings(const toml::node_view<const toml::node>& a_node) override;
 
-		std::uint32_t rayCastIterations{ 15 };
 		float rippleDisplacementAmount{ 0.4f };
 	};
 
@@ -89,10 +91,10 @@ namespace Settings
 		bool LoadSettings();
 		Rain* GetRainType();
 
-		float rayCastHeight{ 6000.0f };
+		float rayCastHeight{ 9999.0f };
 		std::uint32_t colLayerSplash{ stl::to_underlying(RE::COL_LAYER::kLOS) };
 		std::uint32_t colLayerRipple{ stl::to_underlying(RE::COL_LAYER::kLOS) };
-		bool disableRipplesAtFastSpeed{ true };
+		bool disableRipplesAtFastSpeed{ false };
 
 	private:
 		Rain light;

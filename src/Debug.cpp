@@ -21,33 +21,46 @@ namespace Debug
 
 		bool Execute(const RE::SCRIPT_PARAMETER*, RE::SCRIPT_FUNCTION::ScriptData* a_scriptData, RE::TESObjectREFR*, RE::TESObjectREFR*, RE::Script*, RE::ScriptLocals*, double&, std::uint32_t&)
 		{
-			Settings::Manager::GetSingleton()->LoadSettings();
-
-			if (const auto sky = RE::Sky::GetSingleton(); sky && !sky->overrideWeather) {
-				std::string weather;
-				switch (a_scriptData->GetIntegerChunk()->GetInteger()) {
-				case 0:
-					weather = "SkyrimClear";
-					break;
-				case 1:
-					weather = "TestCloudyRain";
-					break;
-				case 2:
-					weather = "SkyrimOvercastRain";
-					break;
-				case 3:
-					weather = "SkyrimStormRain";
-					break;
-				default:
-					break;
+			const auto print = [](const char* a_fmt) {
+				if (RE::ConsoleLog::IsConsoleMode()) {
+					RE::ConsoleLog::GetSingleton()->Print(a_fmt);
 				}
-				if (!weather.empty()) {
-					RE::TaskQueueInterface::GetSingleton()->QueueForceWeather(RE::TESForm::LookupByEditorID<RE::TESWeather>(weather), false);
-				}
-			}
+			};
 
-			if (const auto console = RE::ConsoleLog::GetSingleton(); console && console->IsConsoleMode()) {
-				console->Print("Splashes of Storms settings reloaded");
+			print("[Splashes of Storms] Reloading settings..");
+
+			logger::info("******************************");
+			logger::info("Reloading settings..");
+
+			if (Settings::Manager::GetSingleton()->LoadSettings()) {
+				if (const auto sky = RE::Sky::GetSingleton(); sky && !sky->overrideWeather) {
+					std::string weather;
+					switch (a_scriptData->GetIntegerChunk()->GetInteger()) {
+					case 0:
+						weather = "SkyrimClear";
+						break;
+					case 1:
+						weather = "TestCloudyRain";
+						break;
+					case 2:
+						weather = "SkyrimOvercastRain";
+						break;
+					case 3:
+						weather = "SkyrimStormRain";
+						break;
+					default:
+						break;
+					}
+					if (!weather.empty()) {
+						RE::TaskQueueInterface::GetSingleton()->QueueForceWeather(RE::TESForm::LookupByEditorID<RE::TESWeather>(weather), false);
+						print(fmt::format("[Splashes of Storms] Success! Weather forced to {}", weather).c_str());
+					} else {
+						print("[Splashes of Storms] Success!");
+					}
+				}
+			} else {
+				print("[Splashes of Storms] Fail, errors detected in config! Check po3_SplashesOfStorms.log for more info");
+				logger::error("Failed to load settings from .toml config!");
 			}
 
 			return true;

@@ -4,12 +4,31 @@
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
-	if (a_message->type == SKSE::MessagingInterface::kPostLoad) {
-		if (!Settings::Manager::GetSingleton()->LoadSettings()) {
-			logger::error("Failed to load settings from .toml config! Default values will be used instead");
+	bool printError = false;
+
+	switch (a_message->type) {
+	case SKSE::MessagingInterface::kPostLoad:
+		{
+			logger::info("{:*^30}", "SETTINGS");
+			if (!Settings::Manager::GetSingleton()->LoadSettings()) {
+				printError = true;
+			}
+			logger::info("{:*^30}", "HOOKS");
+			Hooks::Install();
+			Debug::Install();
 		}
-	    Hooks::Install();
-		Debug::Install();
+		break;
+	case SKSE::MessagingInterface::kDataLoaded:
+		{
+			if (printError) {
+				if (const auto consoleLog = RE::ConsoleLog::GetSingleton(); consoleLog) {
+					consoleLog->Print("[Splashes of Storms] Failed to load settings from config!");
+				}
+			}
+		}
+		break;
+	default:
+		break;
 	}
 }
 
@@ -62,7 +81,7 @@ void InitializeLog()
 	log->flush_on(spdlog::level::info);
 
 	spdlog::set_default_logger(std::move(log));
-	spdlog::set_pattern("[%l] %v"s);
+	spdlog::set_pattern("[%H:%M:%S] [%l] %v"s);
 
 	logger::info(FMT_STRING("{} v{}"), Version::PROJECT, Version::NAME);
 }

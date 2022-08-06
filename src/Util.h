@@ -75,12 +75,12 @@ namespace RayCast
 			return std::nullopt;
 		}
 
-	    const auto bhkWorld = a_cell->GetbhkWorld();
+		const auto bhkWorld = a_cell->GetbhkWorld();
 		if (!bhkWorld) {
 			return std::nullopt;
 		}
 
-	    RE::NiPoint3 rayStart = a_input.rayOrigin;
+		RE::NiPoint3 rayStart = a_input.rayOrigin;
 		RE::NiPoint3 rayEnd = a_input.rayOrigin;
 
 		rayStart.z = a_input.height;
@@ -197,8 +197,8 @@ namespace Ripples
 						const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
 						const auto radius = rain->ripple.rayCastRadius;
 
-						SKSE::GetTaskInterface()->AddTask([=] {
-							for (std::uint32_t i = 0; i < rain->ripple.rayCastIterations; i++) {
+						for (std::uint32_t i = 0; i < rain->ripple.rayCastIterations; i++) {
+							SKSE::GetTaskInterface()->AddTask([=] {
 								const RayCast::Input rayCastInput{
 									*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
 									settings->rayCastHeight,
@@ -208,8 +208,8 @@ namespace Ripples
 								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
 									a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
 								}
-							}
-						});
+							});
+						}
 					}
 				}
 			}

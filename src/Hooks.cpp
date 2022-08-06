@@ -4,7 +4,7 @@
 
 namespace Ripples
 {
-    struct ToggleWaterSplashes
+	struct ToggleWaterSplashes
 	{
 		static void thunk(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
 		{
@@ -84,21 +84,22 @@ namespace Splashes
 					auto playerPos = player->GetPosition();
 					playerPos.z += player->GetHeight();
 
-					if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, false); rayOrigin) {
-						SKSE::GetTaskInterface()->AddTask([=] {
-							const RayCast::Input rayCastInput{
-								*rayOrigin,
-								settings->rayCastHeight,
-								settings->colLayerSplash
-							};
+					for (std::uint32_t i = 0; i < rain->splash.rayCastIterations; i++) {
+						if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, true); rayOrigin) {
+							SKSE::GetTaskInterface()->AddTask([=] {
+								const RayCast::Input rayCastInput{
+									*rayOrigin,
+									settings->rayCastHeight,
+									settings->colLayerSplash
+								};
+								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
+									const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
+									const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
 
-							if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
-								const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
-								const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
-
-								RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
-							}
-						});
+									RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
+								}
+							});
+						}
 					}
 				}
 			}

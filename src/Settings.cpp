@@ -6,6 +6,7 @@ namespace Settings
 	{
 		get_value(enabled, a_node, "Enabled"sv);
 		get_value(rayCastRadius, a_node, "RaycastRadius"sv);
+		get_value(rayCastIterations, a_node, "RaycastIterations"sv);
 		get_value(delay, a_node, "SpawnDelay"sv);
 	}
 
@@ -23,7 +24,6 @@ namespace Settings
 	{
 		RainObject::LoadSettings(a_node);
 
-		get_value(rayCastIterations, a_node, "RaycastIterations"sv);
 		get_value(rippleDisplacementAmount, a_node, "RippleDisplacementMult"sv);
 	}
 
@@ -64,6 +64,8 @@ namespace Settings
 
 			return false;
 		}
+
+		logger::info("Success");
 
 		return true;
 	}
