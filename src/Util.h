@@ -14,14 +14,8 @@ namespace RayCast
 {
 	namespace
 	{
-		std::pair<bool, float> get_within_water_bounds(const RE::TESObjectREFR* a_ref, const RE::NiPoint3& a_pos)
+		std::pair<bool, float> get_within_water_bounds(const RE::NiPoint3& a_pos)
 		{
-			auto waterHeight = a_ref ? a_ref->GetWaterHeight() : -RE::NI_INFINITY;
-
-			if (!stl::numeric::essentially_equal(waterHeight, -RE::NI_INFINITY)) {
-				return { true, waterHeight };
-			}
-
 			for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
 				if (waterObject) {
 					for (const auto& bound : waterObject->multiBounds) {
@@ -104,14 +98,12 @@ namespace RayCast
 		if (bhkWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;
 
-			const auto ref = RE::TESHavokUtilities::FindCollidableRef(*pickData.rayOutput.rootCollidable);
-
-		    const auto distance = rayEnd - rayStart;
+			const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
 			output.normal.SetEulerAnglesXYZ({ -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
 
-			if (auto [inWater, waterHeight] = get_within_water_bounds(ref, output.hitPos); inWater && waterHeight > output.hitPos.z) {
+			if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
 				output.hitWater = true;
 				output.hitPos.z = waterHeight;
 			}
@@ -188,6 +180,10 @@ namespace Ripples
 		static void ToggleWaterRipples(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
 		{
 			if (a_enabled && a_fadeAmount > 0.0f) {
+				if (RE::Sky::GetSingleton()->mode.none(RE::Sky::Mode::kFull)) {
+					return;
+				}
+
 				const auto settings = Settings::Manager::GetSingleton();
 				const auto rain = settings->GetRainType();
 
@@ -206,6 +202,8 @@ namespace Ripples
 						const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
 						const auto radius = rain->ripple.rayCastRadius;
 
+						bool enableDebugMarker = settings->enableDebugMarkerRipple;
+
 						for (std::uint32_t i = 0; i < rain->ripple.rayCastIterations; i++) {
 							SKSE::GetTaskInterface()->AddTask([=] {
 								const RayCast::Input rayCastInput{
@@ -214,8 +212,14 @@ namespace Ripples
 									settings->colLayerRipple
 								};
 
-								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && rayCastOutput->hitWater) {
-									a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
+								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput) {
+									if (rayCastOutput->hitWater) {
+										if (!enableDebugMarker) {
+											a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
+										} else {
+											RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
+										}
+									}
 								}
 							});
 						}

@@ -81,11 +81,13 @@ namespace Splashes
 						return;
 					}
 
-					auto playerPos = player->GetPosition();
-					playerPos.z += player->GetHeight();
+                    const auto playerPos = player->GetPosition();
+
+                    const auto enableDebugMarker = settings->enableDebugMarkerSplash;
+					const auto rayCastRadius = rain->splash.rayCastRadius;
 
 					for (std::uint32_t i = 0; i < rain->splash.rayCastIterations; i++) {
-						if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rain->splash.rayCastRadius, playerPos, true); rayOrigin) {
+						if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rayCastRadius, playerPos, true); rayOrigin) {
 							SKSE::GetTaskInterface()->AddTask([=] {
 								const RayCast::Input rayCastInput{
 									*rayOrigin,
@@ -93,10 +95,14 @@ namespace Splashes
 									settings->colLayerSplash
 								};
 								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
-									const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
-									const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
+									if (!enableDebugMarker) {
+										const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
+										const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
 
-									RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
+										RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
+									} else {
+										RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
+									}
 								}
 							});
 						}

@@ -95,6 +95,8 @@ namespace Settings
 		std::uint32_t colLayerSplash{ stl::to_underlying(RE::COL_LAYER::kLOS) };
 		std::uint32_t colLayerRipple{ stl::to_underlying(RE::COL_LAYER::kLOS) };
 		bool disableRipplesAtFastSpeed{ false };
+		bool enableDebugMarkerSplash{ false };
+		bool enableDebugMarkerRipple{ false };
 
 	private:
 		Rain light;

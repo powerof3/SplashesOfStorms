@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(NAME "po3_SplashesOfStorms")
-set(VERSION 1.1.0)
+set(VERSION 1.1.1)
 set(AE_VERSION 1)
 
 # ---- Options ----

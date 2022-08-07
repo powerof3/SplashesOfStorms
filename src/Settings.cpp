@@ -45,6 +45,8 @@ namespace Settings
 			colLayerSplash = settings["CollisionLayerSplashes"].value_or(colLayerSplash);
 			colLayerRipple = settings["CollisionLayerRipples"].value_or(colLayerRipple);
 			disableRipplesAtFastSpeed = settings["DisableRipplesAtFastSpeeds"].value_or(disableRipplesAtFastSpeed);
+			enableDebugMarkerSplash = settings["EnableDebugMarkerSplashes"].value_or(enableDebugMarkerSplash);
+			enableDebugMarkerRipple = settings["EnableDebugMarkerRipples"].value_or(enableDebugMarkerRipple);
 
 			light.LoadSettings(tbl, Rain::TYPE::kLight, "LightRain");
 			medium.LoadSettings(tbl, Rain::TYPE::kMedium, "MediumRain");
