@@ -14,8 +14,14 @@ namespace RayCast
 {
 	namespace
 	{
-		std::pair<bool, float> get_within_water_bounds(const RE::NiPoint3& a_pos)
+		std::pair<bool, float> get_within_water_bounds(const RE::TESObjectREFR* a_ref, const RE::NiPoint3& a_pos)
 		{
+			auto waterHeight = a_ref ? a_ref->GetWaterHeight() : -RE::NI_INFINITY;
+
+			if (!stl::numeric::essentially_equal(waterHeight, -RE::NI_INFINITY)) {
+				return { true, waterHeight };
+			}
+
 			for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
 				if (waterObject) {
 					for (const auto& bound : waterObject->multiBounds) {
@@ -62,7 +68,8 @@ namespace RayCast
 			a_posIn.z
 		};
 
-		if (const auto worldCam = RE::Main::WorldRootCamera(); !a_inPlayerFOV || Camera::PointInFrustum(randPoint, worldCam, 32.0f)) {
+		const auto worldCam = RE::Main::WorldRootCamera();
+		if (!a_inPlayerFOV || !worldCam || Camera::PointInFrustum(randPoint, worldCam, 32.0f)) {
 			return randPoint;
 		}
 
@@ -83,8 +90,8 @@ namespace RayCast
 		RE::NiPoint3 rayStart = a_input.rayOrigin;
 		RE::NiPoint3 rayEnd = a_input.rayOrigin;
 
-		rayStart.z = a_input.height;
-		rayEnd.z = -a_input.height;
+		rayStart.z += a_input.height;
+		rayEnd.z -= a_input.height;
 
 		RE::bhkPickData pickData;
 
@@ -97,12 +104,14 @@ namespace RayCast
 		if (bhkWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;
 
-			const auto distance = rayEnd - rayStart;
+			const auto ref = RE::TESHavokUtilities::FindCollidableRef(*pickData.rayOutput.rootCollidable);
+
+		    const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
 			output.normal.SetEulerAnglesXYZ({ -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
 
-			if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
+			if (auto [inWater, waterHeight] = get_within_water_bounds(ref, output.hitPos); inWater && waterHeight > output.hitPos.z) {
 				output.hitWater = true;
 				output.hitPos.z = waterHeight;
 			}
