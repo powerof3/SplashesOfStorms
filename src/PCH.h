@@ -2,7 +2,7 @@
 
 #include "RE/Skyrim.h"
 #include "SKSE/SKSE.h"
-
+#include "XoshiroCpp.hpp"
 #include <toml++/toml.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -26,8 +26,6 @@ namespace stl
 		T::func = trampoline.write_call<5>(a_src, T::thunk);
 	}
 }
-
-using rng = stl::RNG;
 
 #include "Version.h"
 

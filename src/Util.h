@@ -34,6 +34,46 @@ namespace RayCast
 			}
 			return { false, 0.0f };
 		}
+
+		class RNG
+		{
+		public:
+			static RNG* GetSingleton()
+			{
+				static RNG singleton;
+				return &singleton;
+			}
+
+			template <class T, class = std::enable_if_t<std::is_arithmetic_v<T>>>
+			T Generate(T a_min, T a_max)
+			{
+				if constexpr (std::is_integral_v<T>) {
+					std::uniform_int_distribution<T> distr(a_min, a_max);
+					return distr(rng);
+				} else {
+					std::uniform_real_distribution<T> distr(a_min, a_max);
+					return distr(rng);
+				}
+			}
+
+			float Generate()
+			{
+				return XoshiroCpp::FloatFromBits(rng());
+			}
+
+		private:
+			RNG() :
+				rng(std::chrono::steady_clock::now().time_since_epoch().count())
+			{}
+			RNG(RNG const&) = delete;
+			RNG(RNG&&) = delete;
+			~RNG() = default;
+
+			RNG& operator=(RNG const&) = delete;
+			RNG& operator=(RNG&&) = delete;
+
+			XoshiroCpp::Xoshiro128Plus rng;
+		};
 	}
 
 	struct Input
@@ -53,8 +93,8 @@ namespace RayCast
 
 	inline std::optional<RE::NiPoint3> GenerateRandomPointAroundPlayer(float a_radius, const RE::NiPoint3& a_posIn, bool a_inPlayerFOV)
 	{
-		const auto r = a_radius * std::sqrtf(rng::GetSingleton()->Generate(0.0f, 1.0f));
-		const auto theta = rng::GetSingleton()->Generate(0.0f, 1.0f) * RE::NI_TWO_PI;
+		const auto r = a_radius * std::sqrtf(RNG::GetSingleton()->Generate());
+		const auto theta = RNG::GetSingleton()->Generate() * RE::NI_TWO_PI;
 
 		const RE::NiPoint3 randPoint{
 			a_posIn.x + r * std::cosf(theta),
@@ -62,8 +102,7 @@ namespace RayCast
 			a_posIn.z
 		};
 
-		const auto worldCam = RE::Main::WorldRootCamera();
-		if (!a_inPlayerFOV || !worldCam || Camera::PointInFrustum(randPoint, worldCam, 32.0f)) {
+		if (!a_inPlayerFOV || Camera::PointInFrustum(randPoint, RE::Main::WorldRootCamera(), 32.0f)) {
 			return randPoint;
 		}
 
@@ -101,12 +140,7 @@ namespace RayCast
 			const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
-			output.normal.SetEulerAnglesXYZ({ -0, -0, rng::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
-
-			if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
-				output.hitWater = true;
-				output.hitPos.z = waterHeight;
-			}
+			output.normal.SetEulerAnglesXYZ({ -0, -0, RNG::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
 
 			switch (static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F)) {
 			case RE::COL_LAYER::kCharController:
@@ -116,6 +150,12 @@ namespace RayCast
 				output.hitActor = true;
 				break;
 			default:
+				{
+					if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
+						output.hitWater = true;
+						output.hitPos.z = waterHeight;
+					}
+				}
 				break;
 			}
 
@@ -177,53 +217,44 @@ namespace Ripples
 	{
 		static inline float rippleTimer = 0.0f;
 
-		static void ToggleWaterRipples(RE::TESWaterSystem* a_waterSystem, bool a_enabled, float a_fadeAmount)
+		static void ToggleWaterRipples(Settings::Rain* a_rain, RE::TESWaterSystem* a_waterSystem)
 		{
-			if (a_enabled && a_fadeAmount > 0.0f) {
-				if (RE::Sky::GetSingleton()->mode.none(RE::Sky::Mode::kFull)) {
+			const auto settings = Settings::Manager::GetSingleton();
+
+			rippleTimer += RE::GetSecondsSinceLastFrame();
+
+			if (rippleTimer > a_rain->ripple.delay) {
+				rippleTimer = 0.0f;
+
+				const auto player = RE::PlayerCharacter::GetSingleton();
+				const auto cell = player->GetParentCell();
+				if (!cell) {
 					return;
 				}
 
-				const auto settings = Settings::Manager::GetSingleton();
-				const auto rain = settings->GetRainType();
+				const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
+				const auto radius = a_rain->ripple.rayCastRadius;
 
-				rippleTimer += RE::GetSecondsSinceLastFrame();
+				bool enableDebugMarker = settings->enableDebugMarkerRipple;
 
-				if (rippleTimer > rain->ripple.delay) {
-					rippleTimer = 0.0f;
+				for (std::uint32_t i = 0; i < a_rain->ripple.rayCastIterations; i++) {
+					SKSE::GetTaskInterface()->AddTask([=] {
+						const RayCast::Input rayCastInput{
+							*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
+							settings->rayCastHeight,
+							settings->colLayerRipple
+						};
 
-					const auto player = RE::PlayerCharacter::GetSingleton();
-					const auto cell = player->GetParentCell();
-					if (!cell) {
-						return;
-					}
-
-					if (!settings->disableRipplesAtFastSpeed || player->DoGetMovementSpeed() <= 120.0f) {  //walking speed
-						const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
-						const auto radius = rain->ripple.rayCastRadius;
-
-						bool enableDebugMarker = settings->enableDebugMarkerRipple;
-
-						for (std::uint32_t i = 0; i < rain->ripple.rayCastIterations; i++) {
-							SKSE::GetTaskInterface()->AddTask([=] {
-								const RayCast::Input rayCastInput{
-									*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
-									settings->rayCastHeight,
-									settings->colLayerRipple
-								};
-
-								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput) {
-									if (rayCastOutput->hitWater) {
-										if (!enableDebugMarker) {
-											a_waterSystem->AddRipple(rayCastOutput->hitPos, rain->ripple.rippleDisplacementAmount * 0.0099999998f);
-										} else {
-											RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
-										}
-									}
+						if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput) {
+							if (rayCastOutput->hitWater) {
+								if (!enableDebugMarker) {
+									a_waterSystem->AddRipple(rayCastOutput->hitPos, a_rain->ripple.rippleDisplacementAmount * 0.0099999998f);
+								} else {
+									RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
 								}
-							});
+							}
 						}
-					}
+					});
 				}
 			}
 		}

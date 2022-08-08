@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(NAME "po3_SplashesOfStorms")
-set(VERSION 1.1.1)
+set(VERSION 1.2.0)
 set(AE_VERSION 1)
 
 # ---- Options ----
@@ -170,7 +170,6 @@ target_include_directories(
 	PRIVATE
 		${CMAKE_CURRENT_BINARY_DIR}/include
 		${CMAKE_CURRENT_SOURCE_DIR}/src
-
 )
 
 target_link_libraries(

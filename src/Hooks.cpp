@@ -11,11 +11,17 @@ namespace Ripples
 			const auto settings = Settings::Manager::GetSingleton();
 			const auto rain = settings->GetRainType();
 
-			if (!rain || !rain->ripple.enabled) {
+			if (!rain) {
+				return func(a_waterSystem, false, 0.0f);
+			}
+
+			if (!rain->ripple.enabled) {
 				return func(a_waterSystem, a_enabled, a_fadeAmount);
 			}
 
-			return Dynamic::ToggleWaterRipples(a_waterSystem, a_enabled, a_fadeAmount);
+			if (a_enabled && a_fadeAmount > 0.0f) {
+				Dynamic::ToggleWaterRipples(rain, a_waterSystem);
+			}
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
@@ -62,50 +68,48 @@ namespace Splashes
 		{
 			func(a_precip);
 
-			if (const auto sky = RE::Sky::GetSingleton(); sky->mode.all(RE::Sky::Mode::kFull) && sky->IsRaining()) {
-				const auto settings = Settings::Manager::GetSingleton();
-				const auto rain = settings->GetRainType();
+			const auto settings = Settings::Manager::GetSingleton();
+			const auto rain = settings->GetRainType();
 
-				if (!rain || !rain->splash.enabled) {
+			if (!rain || !rain->splash.enabled) {
+				return;
+			}
+
+			splashTimer += RE::GetSecondsSinceLastFrame();
+
+			if (splashTimer > rain->splash.delay) {
+				splashTimer = 0.0f;
+
+				const auto player = RE::PlayerCharacter::GetSingleton();
+				const auto cell = player->GetParentCell();
+				if (!cell) {
 					return;
 				}
 
-				splashTimer += RE::GetSecondsSinceLastFrame();
+				const auto playerPos = player->GetPosition();
 
-				if (splashTimer > rain->splash.delay) {
-					splashTimer = 0.0f;
+				const auto enableDebugMarker = settings->enableDebugMarkerSplash;
+				const auto rayCastRadius = rain->splash.rayCastRadius;
 
-					const auto player = RE::PlayerCharacter::GetSingleton();
-					const auto cell = player->GetParentCell();
-					if (!cell) {
-						return;
-					}
+				for (std::uint32_t i = 0; i < rain->splash.rayCastIterations; i++) {
+					if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rayCastRadius, playerPos, true); rayOrigin) {
+						SKSE::GetTaskInterface()->AddTask([=] {
+							const RayCast::Input rayCastInput{
+								*rayOrigin,
+								settings->rayCastHeight,
+								settings->colLayerSplash
+							};
+							if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
+								if (!enableDebugMarker) {
+									const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
+									const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
 
-                    const auto playerPos = player->GetPosition();
-
-                    const auto enableDebugMarker = settings->enableDebugMarkerSplash;
-					const auto rayCastRadius = rain->splash.rayCastRadius;
-
-					for (std::uint32_t i = 0; i < rain->splash.rayCastIterations; i++) {
-						if (const auto rayOrigin = RayCast::GenerateRandomPointAroundPlayer(rayCastRadius, playerPos, true); rayOrigin) {
-							SKSE::GetTaskInterface()->AddTask([=] {
-								const RayCast::Input rayCastInput{
-									*rayOrigin,
-									settings->rayCastHeight,
-									settings->colLayerSplash
-								};
-								if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput && !rayCastOutput->hitWater) {
-									if (!enableDebugMarker) {
-										const auto& model = !rayCastOutput->hitActor ? rain->splash.nif : rain->splash.nifActor;
-										const float scale = !rayCastOutput->hitActor ? rain->splash.nifScale : rain->splash.nifScaleActor;
-
-										RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
-									} else {
-										RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
-									}
+									RE::BSTempEffectParticle::Spawn(cell, 1.6f, model.c_str(), rayCastOutput->normal, rayCastOutput->hitPos, scale, 7, nullptr);
+								} else {
+									RE::BSTempEffectParticle::Spawn(cell, 1.6f, "MarkerX.nif", rayCastOutput->normal, rayCastOutput->hitPos, 0.5f, 7, nullptr);
 								}
-							});
-						}
+							}
+						});
 					}
 				}
 			}

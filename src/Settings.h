@@ -2,7 +2,6 @@
 
 namespace Settings
 {
-
 	class RainObject
 	{
 	public:
@@ -103,10 +102,6 @@ namespace Settings
 		Rain medium;
 		Rain heavy;
 
-		struct
-		{
-			RE::TESWeather* weather{ nullptr };
-			Rain::TYPE rainType{ Rain::TYPE::kNone };
-		} cache;
+		Rain::TYPE currentRainType{ Rain::TYPE::kNone };
 	};
 }

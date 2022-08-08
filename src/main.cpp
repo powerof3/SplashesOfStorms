@@ -4,31 +4,13 @@
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 {
-	bool printError = false;
+	if (a_message->type == SKSE::MessagingInterface::kPostLoad) {
+		logger::info("{:*^30}", "SETTINGS");
+		Settings::Manager::GetSingleton()->LoadSettings();
 
-	switch (a_message->type) {
-	case SKSE::MessagingInterface::kPostLoad:
-		{
-			logger::info("{:*^30}", "SETTINGS");
-			if (!Settings::Manager::GetSingleton()->LoadSettings()) {
-				printError = true;
-			}
-			logger::info("{:*^30}", "HOOKS");
-			Hooks::Install();
-			Debug::Install();
-		}
-		break;
-	case SKSE::MessagingInterface::kDataLoaded:
-		{
-			if (printError) {
-				if (const auto consoleLog = RE::ConsoleLog::GetSingleton(); consoleLog) {
-					consoleLog->Print("[Splashes of Storms] Failed to load settings from config!");
-				}
-			}
-		}
-		break;
-	default:
-		break;
+		logger::info("{:*^30}", "HOOKS");
+		Hooks::Install();
+		Debug::Install();
 	}
 }
 

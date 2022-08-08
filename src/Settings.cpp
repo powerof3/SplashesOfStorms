@@ -45,8 +45,8 @@ namespace Settings
 			colLayerSplash = settings["CollisionLayerSplashes"].value_or(colLayerSplash);
 			colLayerRipple = settings["CollisionLayerRipples"].value_or(colLayerRipple);
 			disableRipplesAtFastSpeed = settings["DisableRipplesAtFastSpeeds"].value_or(disableRipplesAtFastSpeed);
-			enableDebugMarkerSplash = settings["EnableDebugMarkerSplashes"].value_or(enableDebugMarkerSplash);
-			enableDebugMarkerRipple = settings["EnableDebugMarkerRipples"].value_or(enableDebugMarkerRipple);
+			enableDebugMarkerSplash = settings["DebugSplashes"].value_or(enableDebugMarkerSplash);
+			enableDebugMarkerRipple = settings["DebugRipples"].value_or(enableDebugMarkerRipple);
 
 			light.LoadSettings(tbl, Rain::TYPE::kLight, "LightRain");
 			medium.LoadSettings(tbl, Rain::TYPE::kMedium, "MediumRain");
@@ -74,38 +74,44 @@ namespace Settings
 
 	Rain* Manager::GetRainType()
 	{
-		const auto sky = RE::Sky::GetSingleton();
-		const auto currentWeather = sky->currentWeather;
+		bool isRaining = false;
 
-		if (cache.weather == nullptr || cache.rainType == Rain::TYPE::kNone || cache.weather != currentWeather) {
-			if (cache.weather = currentWeather; cache.weather) {
-				if (const auto precip = cache.weather->precipitationData; precip && precip->data.size() >= 12) {
-					switch (static_cast<std::uint32_t>(precip->data[11].f)) {  //particle density
-					case 1:
-					case 2:
-					case 3:
-					case 4:
-						cache.rainType = Rain::TYPE::kLight;
-						break;
-					case 5:
-					case 6:
-					case 7:
-						cache.rainType = Rain::TYPE::kMedium;
-						break;
-					case 8:
-					case 9:
-					case 10:
-						cache.rainType = Rain::TYPE::kHeavy;
-						break;
-					default:
-						cache.rainType = Rain::TYPE::kNone;
-						break;
-					}
+		if (const auto sky = RE::Sky::GetSingleton(); sky->mode.all(RE::Sky::Mode::kFull) && sky->IsRaining()) {
+			if (const auto precip = sky->precip; precip) {
+				switch (static_cast<std::uint32_t>(precip->currentParticleDensity)) {  //particle density
+				case 0:
+				case 1:
+				case 2:
+				case 3:
+				case 4:
+					currentRainType = Rain::TYPE::kLight;
+					break;
+				case 5:
+				case 6:
+				case 7:
+					currentRainType = Rain::TYPE::kMedium;
+					break;
+				case 8:
+				case 9:
+				case 10:
+					currentRainType = Rain::TYPE::kHeavy;
+					break;
+				default:
+					currentRainType = Rain::TYPE::kNone;
+					break;
+				}
+
+				if (currentRainType != Rain::TYPE::kNone) {
+					isRaining = true;
 				}
 			}
 		}
 
-		switch (cache.rainType) {
+		if (!isRaining) {
+			currentRainType = Rain::TYPE::kNone;
+		}
+
+		switch (currentRainType) {
 		case Rain::TYPE::kLight:
 			return &light;
 		case Rain::TYPE::kMedium:
