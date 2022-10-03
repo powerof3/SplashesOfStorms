@@ -20,7 +20,8 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	v.PluginVersion(Version::MAJOR);
 	v.PluginName("Splashes of Storms");
 	v.AuthorName("powerofthree");
-	v.UsesAddressLibrary(true);
+	v.UsesAddressLibrary();
+	v.UsesNoStructs();
 	v.CompatibleVersions({ SKSE::RUNTIME_LATEST });
 
 	return v;
