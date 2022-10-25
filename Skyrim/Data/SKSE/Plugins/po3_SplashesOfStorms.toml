@@ -1,0 +1,58 @@
+# Settings can be reloaded ingame with console command "splashes". 
+# Optional integer parameter to force weather (0 - clear weather | 1 - light rain | 2 - medium rain | 3 - heavy rain)
+# ie. "splashes" will reload settings. "splashes 3" will reload settings AND set current weather to heavy rain
+
+[Settings]
+DebugSplashes = false										# Spawn debug markers
+DebugRipples = false
+
+[LightRain]
+
+	[LightRain.splashes]
+		Enabled = true
+		RaycastRadius = 1024.0								# Generate rain splashes in this radius around player. Higher radius = less dense splashes
+		RaycastIterations = 2								# Number of raycasts per frame. Higher values = more splashes, very high values (25+) can cause FPS drops
+		NifPath = "Effects\\rainSplashNoSpray.NIF"			# Nif path (path is relative to Data directory)
+		NifScale = 0.5										# Scale of splash effect
+		NifPathActor = "Effects\\rainSplashNoSpray.NIF"		# Nif path for splashes hitting characters
+		NifScaleActor = 0.4									# Scale of splash effect hitting characters
+		
+	[LightRain.ripples]
+		Enabled = true
+		RaycastRadius = 1024.0								# Generate rain ripples in this radius around player. Higher radius = less dense ripples
+		RaycastIterations = 15								# Amount of ripples generated per raycast hit. Higher values = more frequent ripples
+		RippleDisplacementMult = 0.3						# Size of each individual ripple
+
+[MediumRain]
+
+	[MediumRain.splashes]
+		Enabled = true
+		RaycastRadius = 1024.0
+		RaycastIterations = 3
+		NifPath = "Effects\\rainSplashNoSpray.NIF"
+		NifScale = 0.5
+		NifPathActor = "Effects\\rainSplashNoSpray.NIF"
+		NifScaleActor = 0.4
+
+	[MediumRain.ripples]
+		Enabled = true
+		RaycastRadius = 1024.0
+		RaycastIterations = 20
+		RippleDisplacementMult = 0.3
+
+[HeavyRain]
+
+	[HeavyRain.splashes]
+		Enabled = true
+		RaycastRadius = 1024.0
+		RaycastIterations = 5
+		NifPath = "Effects\\rainSplashNoSpray.NIF"
+		NifScale = 0.55
+		NifPathActor = "Effects\\rainSplashNoSpray.NIF"
+		NifScaleActor = 0.45
+
+	[HeavyRain.ripples]
+		Enabled = true
+		RaycastRadius = 1024.0
+		RaycastIterations = 25
+		RippleDisplacementMult = 0.3
