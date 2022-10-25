@@ -1,86 +1,76 @@
 #pragma once
 
-namespace Camera
+namespace util
 {
-	inline bool PointInFrustum(const RE::NiPoint3& a_point, RE::NiCamera* a_camera, float a_radius)
+	class RNG
 	{
-		using func_t = decltype(&PointInFrustum);
-		REL::Relocation<func_t> func{ RELOCATION_ID(15672, 15900) };
-		return func(a_point, a_camera, a_radius);
-	}
-}
-
-namespace RayCast
-{
-	namespace
-	{
-		std::pair<bool, float> get_within_water_bounds(const RE::NiPoint3& a_pos)
+	public:
+		static RNG* GetSingleton()
 		{
-			for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
-				if (waterObject) {
-					for (const auto& bound : waterObject->multiBounds) {
-						if (bound) {
-							if (auto size{ bound->size }; size.z <= 10.0f) {  //avoid sloped water
-								auto center{ bound->center };
-								const auto boundMin = center - size;
-								const auto boundMax = center + size;
-								if (!(a_pos.x < boundMin.x || a_pos.x > boundMax.x || a_pos.y < boundMin.y || a_pos.y > boundMax.y)) {
-									return { true, center.z };
-								}
+			static RNG singleton;
+			return &singleton;
+		}
+
+		template <class T, class = std::enable_if_t<std::is_arithmetic_v<T>>>
+		T Generate(T a_min, T a_max)
+		{
+			if constexpr (std::is_integral_v<T>) {
+				std::uniform_int_distribution<T> distr(a_min, a_max);
+				return distr(rng);
+			} else {
+				std::uniform_real_distribution<T> distr(a_min, a_max);
+				return distr(rng);
+			}
+		}
+
+		float Generate()
+		{
+			return XoshiroCpp::FloatFromBits(rng());
+		}
+
+	private:
+		RNG() :
+			rng(std::chrono::steady_clock::now().time_since_epoch().count())
+		{}
+		RNG(RNG const&) = delete;
+		RNG(RNG&&) = delete;
+		~RNG() = default;
+
+		RNG& operator=(RNG const&) = delete;
+		RNG& operator=(RNG&&) = delete;
+
+		XoshiroCpp::Xoshiro128Plus rng;
+	};
+
+	inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
+	{
+	    for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
+			if (waterObject) {
+				for (const auto& bound : waterObject->multiBounds) {
+					if (bound) {
+						if (auto size{ bound->size }; size.z <= 10.0f) {  //avoid sloped water
+							auto center{ bound->center };
+							const auto boundMin = center - size;
+							const auto boundMax = center + size;
+							if (!(a_pos.x < boundMin.x || a_pos.x > boundMax.x || a_pos.y < boundMin.y || a_pos.y > boundMax.y)) {
+								return { true, center.z };
 							}
 						}
 					}
 				}
 			}
-			return { false, 0.0f };
 		}
-
-		class RNG
-		{
-		public:
-			static RNG* GetSingleton()
-			{
-				static RNG singleton;
-				return &singleton;
-			}
-
-			template <class T, class = std::enable_if_t<std::is_arithmetic_v<T>>>
-			T Generate(T a_min, T a_max)
-			{
-				if constexpr (std::is_integral_v<T>) {
-					std::uniform_int_distribution<T> distr(a_min, a_max);
-					return distr(rng);
-				} else {
-					std::uniform_real_distribution<T> distr(a_min, a_max);
-					return distr(rng);
-				}
-			}
-
-			float Generate()
-			{
-				return XoshiroCpp::FloatFromBits(rng());
-			}
-
-		private:
-			RNG() :
-				rng(std::chrono::steady_clock::now().time_since_epoch().count())
-			{}
-			RNG(RNG const&) = delete;
-			RNG(RNG&&) = delete;
-			~RNG() = default;
-
-			RNG& operator=(RNG const&) = delete;
-			RNG& operator=(RNG&&) = delete;
-
-			XoshiroCpp::Xoshiro128Plus rng;
-		};
+		return { false, 0.0f };
 	}
+}
 
-	struct Input
+namespace RayCast
+{
+	using namespace util;
+
+    struct Input
 	{
 		RE::NiPoint3 rayOrigin{};
-		float height{ 0.0f };
-		std::uint32_t collisionLayer{ 0 };
 	};
 
 	struct Output
@@ -102,7 +92,7 @@ namespace RayCast
 			a_posIn.z
 		};
 
-		if (!a_inPlayerFOV || Camera::PointInFrustum(randPoint, RE::Main::WorldRootCamera(), 32.0f)) {
+		if (!a_inPlayerFOV || RE::NiCamera::PointInFrustum(randPoint, RE::Main::WorldRootCamera(), 32.0f)) {
 			return randPoint;
 		}
 
@@ -123,16 +113,18 @@ namespace RayCast
 		RE::NiPoint3 rayStart = a_input.rayOrigin;
 		RE::NiPoint3 rayEnd = a_input.rayOrigin;
 
-		rayStart.z += a_input.height;
-		rayEnd.z -= a_input.height;
+		constexpr auto height = 9999.0f;
+
+		rayStart.z += height;
+		rayEnd.z -= height;
 
 		RE::bhkPickData pickData;
 
-		auto havokWorldScale = RE::bhkWorld::GetWorldScale();
+		const auto havokWorldScale = RE::bhkWorld::GetWorldScale();
 		pickData.rayInput.from = rayStart * havokWorldScale;
 		pickData.rayInput.to = rayEnd * havokWorldScale;
 		pickData.rayInput.enableShapeCollectionFilter = false;
-		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | a_input.collisionLayer;
+		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | stl::to_underlying(RE::COL_LAYER::kLOS);
 
 		if (bhkWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;
@@ -151,7 +143,7 @@ namespace RayCast
 				break;
 			default:
 				{
-					if (auto [inWater, waterHeight] = get_within_water_bounds(output.hitPos); inWater && waterHeight > output.hitPos.z) {
+					if (auto [inWater, waterHeight] = point_in_water(output.hitPos); inWater && waterHeight > output.hitPos.z) {
 						output.hitWater = true;
 						output.hitPos.z = waterHeight;
 					}
@@ -216,14 +208,15 @@ namespace Ripples
 	struct Dynamic
 	{
 		static inline float rippleTimer = 0.0f;
+		static constexpr float rippleDelay = 0.01f;
 
-		static void ToggleWaterRipples(Settings::Rain* a_rain, RE::TESWaterSystem* a_waterSystem)
+		static void ToggleWaterRipples(Rain* a_rain, RE::TESWaterSystem* a_waterSystem)
 		{
 			const auto settings = Settings::Manager::GetSingleton();
 
 			rippleTimer += RE::GetSecondsSinceLastFrame();
 
-			if (rippleTimer > a_rain->ripple.delay) {
+			if (rippleTimer > rippleDelay) {
 				rippleTimer = 0.0f;
 
 				const auto player = RE::PlayerCharacter::GetSingleton();
@@ -233,18 +226,17 @@ namespace Ripples
 				}
 
 				const auto playerPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
-				const auto radius = a_rain->ripple.rayCastRadius;
 
-				bool enableDebugMarker = settings->enableDebugMarkerRipple;
+				const auto rayCastRadius = a_rain->ripple.rayCastRadius;
+				const auto rayCastIterations = a_rain->ripple.rayCastIterations;
 
-				for (std::uint32_t i = 0; i < a_rain->ripple.rayCastIterations; i++) {
+				const auto enableDebugMarker = settings->enableDebugMarkerRipple;
+
+				for (std::size_t i = 0; i < rayCastIterations; i++) {
 					SKSE::GetTaskInterface()->AddTask([=] {
 						const RayCast::Input rayCastInput{
-							*RayCast::GenerateRandomPointAroundPlayer(radius, playerPos, false),
-							settings->rayCastHeight,
-							settings->colLayerRipple
+							*RayCast::GenerateRandomPointAroundPlayer(rayCastRadius, playerPos, false),
 						};
-
 						if (const auto rayCastOutput = GenerateRayCast(cell, rayCastInput); rayCastOutput) {
 							if (rayCastOutput->hitWater) {
 								if (!enableDebugMarker) {
