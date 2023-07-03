@@ -42,7 +42,7 @@ namespace util
 		XoshiroCpp::Xoshiro128Plus rng;
 	};
 
-	inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
+    inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
 	{
 	    for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
 			if (waterObject) {

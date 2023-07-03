@@ -2,14 +2,15 @@
 
 #include "RE/Skyrim.h"
 #include "SKSE/SKSE.h"
-#include "XoshiroCpp.hpp"
+#include "ClibUtil/string.hpp"
+#include "ClibUtil/rng.hpp"
 #include <toml++/toml.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
 #define DLLEXPORT __declspec(dllexport)
 
 namespace logger = SKSE::log;
-namespace string = SKSE::stl::string;
+namespace string = clib_util::string;
 
 using namespace std::literals;
 
