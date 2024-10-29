@@ -5,12 +5,37 @@ namespace util
 	class RNG
 	{
 	public:
+		static RNG* GetSingleton()
+		{
+			static RNG singleton;
+			return &singleton;
+		}
+
+		float generate(float a_min, float a_max)
+		{
+			std::uniform_real_distribution<float> distr(a_min, a_max);
+			return distr(rng);
+		}
+
 		float generate()
 		{
-			return static_cast<float>((XoshiroCpp::DoubleFromBits(static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()))));
+			return XoshiroCpp::FloatFromBits(rng());
 		}
+
+	private:
+		RNG() :
+			rng(std::chrono::steady_clock::now().time_since_epoch().count())
+		{}
+
+		RNG(RNG const&) = delete;
+		RNG(RNG&&) = delete;
+		~RNG() = default;
+		RNG& operator=(RNG const&) = delete;
+		RNG& operator=(RNG&&) = delete;
+
+		XoshiroCpp::Xoshiro128Plus rng;
 	};
-	
+
 	inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
 	{
 		if (auto waterSystem = RE::TESWaterSystem::GetSingleton(); waterSystem->enabled) {
@@ -39,7 +64,7 @@ namespace RayCast
 {
 	using namespace util;
 
-    struct Input
+	struct Input
 	{
 		RE::NiPoint3 rayOrigin{};
 	};
@@ -53,9 +78,9 @@ namespace RayCast
 	};
 
 	inline std::optional<RE::NiPoint3> GenerateRandomPointAroundPlayer(float a_radius, const RE::NiPoint3& a_posIn, bool a_inPlayerFOV)
-	{	
-		const float r = a_radius * std::sqrtf(RNG().generate());
-		const float theta = RNG().generate() * RE::NI_TWO_PI;
+	{
+		const float r = a_radius * std::sqrtf(RNG::GetSingleton()->generate());
+		const float theta = RNG::GetSingleton()->generate() * RE::NI_TWO_PI;
 
 		const RE::NiPoint3 randPoint{
 			a_posIn.x + r * std::cosf(theta),
@@ -103,7 +128,7 @@ namespace RayCast
 			const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
-			output.normal.SetEulerAnglesXYZ({ -0, -0, clib_util::RNG().generate(-RE::NI_PI, RE::NI_PI) });
+			output.normal.SetEulerAnglesXYZ({ -0, -0, RNG::GetSingleton()->generate(-RE::NI_PI, RE::NI_PI) });
 
 			switch (static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F)) {
 			case RE::COL_LAYER::kCharController:
