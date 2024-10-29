@@ -78,15 +78,9 @@ public:
 
 namespace Settings
 {
-	class Manager
+	class Manager : public ISingleton<Manager>
 	{
 	public:
-		[[nodiscard]] static Manager* GetSingleton()
-		{
-			static Manager singleton;
-			return std::addressof(singleton);
-		}
-
 		bool LoadSettings();
 
 		Rain* GetRain(float a_particleDensity);

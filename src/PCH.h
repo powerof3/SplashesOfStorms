@@ -1,11 +1,16 @@
 #pragma once
 
+
 #include "RE/Skyrim.h"
 #include "SKSE/SKSE.h"
+
+#include "toml++/toml.hpp"
+
+#include <spdlog/sinks/basic_file_sink.h>
+
 #include "ClibUtil/string.hpp"
 #include "ClibUtil/rng.hpp"
-#include <toml++/toml.h>
-#include <spdlog/sinks/basic_file_sink.h>
+#include "ClibUtil/singleton.hpp"
 
 #define DLLEXPORT __declspec(dllexport)
 
@@ -13,6 +18,7 @@ namespace logger = SKSE::log;
 namespace string = clib_util::string;
 
 using namespace std::literals;
+using namespace clib_util::singleton;
 
 namespace stl
 {

@@ -5,55 +5,26 @@ namespace util
 	class RNG
 	{
 	public:
-		static RNG* GetSingleton()
+		float generate()
 		{
-			static RNG singleton;
-			return &singleton;
+			return static_cast<float>((XoshiroCpp::DoubleFromBits(static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()))));
 		}
-
-		template <class T, class = std::enable_if_t<std::is_arithmetic_v<T>>>
-		T Generate(T a_min, T a_max)
-		{
-			if constexpr (std::is_integral_v<T>) {
-				std::uniform_int_distribution<T> distr(a_min, a_max);
-				return distr(rng);
-			} else {
-				std::uniform_real_distribution<T> distr(a_min, a_max);
-				return distr(rng);
-			}
-		}
-
-		float Generate()
-		{
-			return XoshiroCpp::FloatFromBits(rng());
-		}
-
-	private:
-		RNG() :
-			rng(std::chrono::steady_clock::now().time_since_epoch().count())
-		{}
-		RNG(RNG const&) = delete;
-		RNG(RNG&&) = delete;
-		~RNG() = default;
-
-		RNG& operator=(RNG const&) = delete;
-		RNG& operator=(RNG&&) = delete;
-
-		XoshiroCpp::Xoshiro128Plus rng;
 	};
-
-    inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
+	
+	inline std::pair<bool, float> point_in_water(const RE::NiPoint3& a_pos)
 	{
-	    for (const auto& waterObject : RE::TESWaterSystem::GetSingleton()->waterObjects) {
-			if (waterObject) {
-				for (const auto& bound : waterObject->multiBounds) {
-					if (bound) {
-						if (auto size{ bound->size }; size.z <= 10.0f) {  //avoid sloped water
-							auto center{ bound->center };
-							const auto boundMin = center - size;
-							const auto boundMax = center + size;
-							if (!(a_pos.x < boundMin.x || a_pos.x > boundMax.x || a_pos.y < boundMin.y || a_pos.y > boundMax.y)) {
-								return { true, center.z };
+		if (auto waterSystem = RE::TESWaterSystem::GetSingleton(); waterSystem->enabled) {
+			for (const auto& waterObject : waterSystem->waterObjects) {
+				if (waterObject) {
+					for (const auto& bound : waterObject->multiBounds) {
+						if (bound) {
+							if (auto size{ bound->size }; size.z <= 10.0f) {  //avoid sloped water
+								auto center{ bound->center };
+								const auto boundMin = center - size;
+								const auto boundMax = center + size;
+								if (!(a_pos.x < boundMin.x || a_pos.x > boundMax.x || a_pos.y < boundMin.y || a_pos.y > boundMax.y)) {
+									return { true, center.z };
+								}
 							}
 						}
 					}
@@ -82,9 +53,9 @@ namespace RayCast
 	};
 
 	inline std::optional<RE::NiPoint3> GenerateRandomPointAroundPlayer(float a_radius, const RE::NiPoint3& a_posIn, bool a_inPlayerFOV)
-	{
-		const auto r = a_radius * std::sqrtf(RNG::GetSingleton()->Generate());
-		const auto theta = RNG::GetSingleton()->Generate() * RE::NI_TWO_PI;
+	{	
+		const float r = a_radius * std::sqrtf(RNG().generate());
+		const float theta = RNG().generate() * RE::NI_TWO_PI;
 
 		const RE::NiPoint3 randPoint{
 			a_posIn.x + r * std::cosf(theta),
@@ -118,13 +89,13 @@ namespace RayCast
 		rayStart.z += height;
 		rayEnd.z -= height;
 
-		RE::bhkPickData pickData;
+		RE::bhkPickData pickData{};
 
 		const auto havokWorldScale = RE::bhkWorld::GetWorldScale();
 		pickData.rayInput.from = rayStart * havokWorldScale;
 		pickData.rayInput.to = rayEnd * havokWorldScale;
 		pickData.rayInput.enableShapeCollectionFilter = false;
-		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | stl::to_underlying(RE::COL_LAYER::kLOS);
+		pickData.rayInput.filterInfo = RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup() << 16 | std::to_underlying(RE::COL_LAYER::kLOS);
 
 		if (bhkWorld->PickObject(pickData); pickData.rayOutput.HasHit()) {
 			Output output;
@@ -132,7 +103,7 @@ namespace RayCast
 			const auto distance = rayEnd - rayStart;
 			output.hitPos = rayStart + (distance * pickData.rayOutput.hitFraction);
 
-			output.normal.SetEulerAnglesXYZ({ -0, -0, RNG::GetSingleton()->Generate(-RE::NI_PI, RE::NI_PI) });
+			output.normal.SetEulerAnglesXYZ({ -0, -0, clib_util::RNG().generate(-RE::NI_PI, RE::NI_PI) });
 
 			switch (static_cast<RE::COL_LAYER>(pickData.rayOutput.rootCollidable->broadPhaseHandle.collisionFilterInfo & 0x7F)) {
 			case RE::COL_LAYER::kCharController:
@@ -212,8 +183,6 @@ namespace Ripples
 
 		static void ToggleWaterRipples(Rain* a_rain, RE::TESWaterSystem* a_waterSystem)
 		{
-			const auto settings = Settings::Manager::GetSingleton();
-
 			rippleTimer += RE::GetSecondsSinceLastFrame();
 
 			if (rippleTimer > rippleDelay) {
@@ -230,7 +199,7 @@ namespace Ripples
 				const auto rayCastRadius = a_rain->ripple.rayCastRadius;
 				const auto rayCastIterations = a_rain->ripple.rayCastIterations;
 
-				const auto enableDebugMarker = settings->enableDebugMarkerRipple;
+				static const auto enableDebugMarker = Settings::Manager::GetSingleton()->enableDebugMarkerRipple;
 
 				for (std::size_t i = 0; i < rayCastIterations; i++) {
 					SKSE::GetTaskInterface()->AddTask([=] {

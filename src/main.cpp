@@ -7,7 +7,6 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message)
 	if (a_message->type == SKSE::MessagingInterface::kPostLoad) {
 		logger::info("{:*^30}", "SETTINGS");
 		Settings::Manager::GetSingleton()->LoadSettings();
-
 		logger::info("{:*^30}", "HOOKS");
 		Hooks::Install();
 		Debug::Install();
@@ -81,7 +80,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	logger::info("loaded");
 
-	SKSE::Init(a_skse);
+	SKSE::Init(a_skse, false);
 
 	const auto messaging = SKSE::GetMessagingInterface();
 	messaging->RegisterListener(MessageHandler);

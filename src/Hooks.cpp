@@ -53,7 +53,7 @@ namespace Splashes
 				return;
 			}
 
-			const auto effect = a_precipGeometry->properties[RE::BSGeometry::States::kEffect];
+			const auto& effect = a_precipGeometry->properties[RE::BSGeometry::States::kEffect];
 			const auto particleShader = netimmerse_cast<RE::BSParticleShaderProperty*>(effect.get());
 			const auto particleEmitter = particleShader ? particleShader->particleEmitter : nullptr;
 
